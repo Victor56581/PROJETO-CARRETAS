@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>PROJETO CARRETAS — Final (Verde Logístico)</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg1:#07110a;
+  --bg2:#04120a;
+  --accent:#00c17a;   /* verde principal */
+  --accent-2:#00ffa1; /* verde claro */
+  --muted:#9fbfb4;
+  --glass: rgba(10,14,12,0.64);
+  --danger:#ff6b6b;
+}
+*{box-sizing:border-box;font-family:Poppins,system-ui,-apple-system,'Segoe UI',Roboto,Arial;color:#e8fff6}
+html,body{height:100%;margin:0;background:
+  radial-gradient(1200px 600px at 10% 10%, #042017 0%, #03120a 30%, #000 100%),
+  url('https://i.postimg.cc/XrffNBLq/XrffNBLq.jpg') center/cover no-repeat;
+  background-blend-mode:overlay;}
+
+/* Layout */
+.app-center{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.card{
+  width:1100px; max-width:calc(100% - 40px); border-radius:14px; overflow:hidden;
+  box-shadow: 0 30px 90px rgba(0,0,0,0.6); display:flex; background:linear-gradient(180deg, rgba(6,12,8,0.94), rgba(2,6,6,0.94));
+  transition: all 320ms ease;
+}
+.left{ width:380px; padding:28px; background:linear-gradient(180deg, rgba(4,10,8,0.72), rgba(6,12,10,0.72)); display:flex; flex-direction:column; gap:12px; }
+.right{ flex:1; padding:18px; display:flex; flex-direction:column; gap:12px; min-height:560px; }
+
+/* Branding */
+.brand{display:flex;align-items:center;gap:12px}
+.logo{width:64px;height:64px;border-radius:12px;background:linear-gradient(90deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;color:#021;font-weight:900;font-size:22px}
+.h1{font-size:18px;color:var(--accent);font-weight:900}
+.small{color:var(--muted);font-size:13px}
+
+/* Inputs & Buttons */
+.input, .select, .file { width:100%; padding:10px;border-radius:10px;border:none;background:rgba(255,255,255,0.03); color: #e8fff6; margin-top:8px; }
+.btn { padding:10px 12px;border-radius:10px;border:none; cursor:pointer; font-weight:800; color:#021; background:linear-gradient(90deg,var(--accent-2),var(--accent)); box-shadow:0 6px 18px rgba(0,197,122,0.08); }
+.btn.warn { background: linear-gradient(90deg,var(--danger),#ffb4b4); color:#021; }
+.row { display:flex; gap:8px; align-items:center; }
+
+/* Panels */
+.panel { background: var(--glass); padding:12px; border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,0.4); }
+.preview { max-height:340px; overflow:auto; border-radius:8px; padding:6px; background:rgba(0,0,0,0.12) }
+
+/* Table */
+.table { width:100%; border-collapse:collapse; margin-top:8px; font-size:13px; }
+.table th, .table td { padding:8px; border-bottom:1px dashed rgba(255,255,255,0.04); text-align:left; }
+.table th { color:var(--accent); font-weight:800; }
+
+/* Small UI */
+.copy-btn{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:6px 8px;border-radius:8px;color:var(--muted);cursor:pointer}
+.notice{color:#ffdca8;font-size:13px}
+.footer{display:flex;justify-content:space-between;align-items:center;margin-top:6px}
+.hidden{display:none}
+
+/* Toast */
+#toast{position:fixed;right:20px;bottom:20px;background:#062716;padding:12px 16px;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,0.6);display:none;color:var(--accent-2);font-weight:700}
+
+/* Responsive */
+@media (max-width:1100px){
+  .card{flex-direction:column;width:calc(100% - 24px)}
+  .left{width:100%}
+}
+</style>
+</head>
+<body>
+<div class="app-center">
+  <div class="card" id="mainCard">
+
+    <!-- LEFT: login & admin controls -->
+    <div class="left">
+      <div class="brand">
+        <div class="logo">C</div>
+        <div>
+          <div class="h1">PROJETO CARRETAS</div>
+          <div class="small">Painel • Frentes • Consulta</div>
+        </div>
+      </div>
+
+      <!-- LOGIN PANEL -->
+      <div id="loginPanel" class="panel">
+        <div style="font-weight:800;margin-bottom:6px">Acesse o sistema</div>
+        <input id="loginUser" class="input" placeholder="Usuário (VICTOR / VISITANTE)">
+        <input id="loginPass" type="password" class="input" placeholder="Senha">
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn" onclick="login()">Entrar</button>
+          <button class="btn" onclick="fillDemo()">Demo</button>
+        </div>
+        <div class="small" style="margin-top:8px">Admin: <strong>VICTOR</strong> / <strong>CMPK123</strong> — Visitante: <strong>VISITANTE</strong> / <strong>140205</strong></div>
+      </div>
+
+      <!-- ADMIN PANEL -->
+      <div id="adminPanel" class="panel hidden">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div style="font-weight:800">Importar planilha diária</div>
+          <!-- NEW: Generate link button -->
+          <button class="copy-btn" onclick="genAndCopyPortalLink()" title="Gerar link público de consulta">Gerar Link de Consulta 🔗</button>
+        </div>
+
+        <div class="small" style="margin-top:8px">Colunas aceitas: <strong>Motorista | CPF | Veículo | Placa 1 | Placa 2 | Nº Eixos | Capacidade | Frente | Localização</strong></div>
+        <input id="fileInput" type="file" accept=".xlsx,.xls,.csv" class="file" style="margin-top:10px">
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <input id="frontDate" type="date" class="input" style="flex:1">
+          <button class="btn" onclick="importSheet()">Importar e Ativar</button>
+        </div>
+
+        <div class="small" style="margin-top:8px">A data ativa determina qual programação o portal mostrará.</div>
+
+        <hr style="border:none;border-top:1px dashed rgba(255,255,255,0.04);margin:12px 0">
+        <div style="font-weight:800">Datas registradas</div>
+        <div id="datesList" class="preview" style="margin-top:8px">—</div>
+
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn" onclick="exportActiveFrentes()">Exportar Frentes Ativas (XLSX)</button>
+          <button class="btn warn" onclick="clearAllFrentes()">Limpar Frentes</button>
+        </div>
+      </div>
+
+      <!-- QUICK PANEL -->
+      <div id="quickPanel" class="panel hidden">
+        <div style="font-weight:800">Gerar link por CPF</div>
+        <input id="cpfForLink" class="input" placeholder="CPF (somente números)">
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn" onclick="genLink()">Gerar</button>
+          <button class="btn" onclick="openPortalPublic()">Abrir Portal</button>
+        </div>
+        <div id="linkOut" class="small" style="margin-top:8px">—</div>
+      </div>
+
+      <!-- SESSION PANEL -->
+      <div id="sessionPanel" class="panel hidden">
+        <div class="small">Usuário: <strong id="whoami">—</strong></div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn" onclick="logout()">Sair</button>
+          <button class="btn" onclick="goToSection('cadastros')">Abrir Cadastros</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT: content -->
+    <div class="right">
+
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div style="font-weight:900;color:var(--accent)">Painel — Frentes & Portal</div>
+        <div id="topUser" class="small">—</div>
+      </div>
+
+      <div style="display:flex;gap:8px" id="menuBar">
+        <button class="btn" onclick="goToSection('dashboard')">Dashboard</button>
+        <button class="btn" onclick="goToSection('frentes')">Frentes</button>
+        <button class="btn" onclick="openPortalPublic()">Portal (público)</button>
+        <button class="btn" onclick="goToSection('cadastros')">Cadastros</button>
+      </div>
+
+      <div id="contentArea" class="panel" style="flex:1; overflow:auto;">
+
+        <!-- DASHBOARD -->
+        <div id="section_dashboard">
+          <h3>Resumo</h3>
+          <div class="small" id="activeDateShow">Data ativa: —</div>
+          <div style="display:flex;gap:12px;margin-top:12px">
+            <div style="flex:1">
+              <div class="small">Motoristas no sistema</div>
+              <div id="statMotoristas" style="font-weight:800;font-size:20px">0</div>
+            </div>
+            <div style="flex:1">
+              <div class="small">Frentes (data ativa)</div>
+              <div id="statFrentes" style="font-weight:800;font-size:20px">0</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- FRENTES -->
+        <div id="section_frentes" class="hidden">
+          <h3>Frentes ativas</h3>
+          <div class="small">Lista que o portal exibirá para a data ativa.</div>
+          <div id="frentesPreview" class="preview" style="margin-top:8px">—</div>
+        </div>
+
+        <!-- PORTAL PUBLICO -->
+        <div id="section_portal" class="hidden">
+          <h3>Portal público — Consulta por CPF</h3>
+          <div class="small">Acesse via link público ou digite CPF abaixo.</div>
+          <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+            <input id="portalCPF" class="input" placeholder="Digite o CPF (apenas números)">
+            <button class="btn" onclick="portalLookup()">Consultar</button>
+          </div>
+          <div id="portalResult" style="margin-top:12px"></div>
+          <div class="small" style="margin-top:8px">Link público: <span id="publicLink" class="copy-btn">—</span></div>
+        </div>
+
+        <!-- CADASTROS -->
+        <div id="section_cadastros" class="hidden">
+          <h3>Cadastros locais</h3>
+          <div class="small">Cadastro manual (cola linha completa) e export.</div>
+
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <input id="cMotorista" class="input" placeholder="Motorista (cole linha completa)"/>
+            <input id="cCPF" class="input" placeholder="CPF"/>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <input id="cVeiculo" class="input" placeholder="Veículo"/>
+            <input id="cPlaca1" class="input" placeholder="Placa 1"/>
+            <input id="cPlaca2" class="input" placeholder="Placa 2"/>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <input id="cEixos" class="input" placeholder="Nº Eixos"/>
+            <input id="cCap" class="input" placeholder="Capacidade em KG"/>
+            <button class="btn" onclick="saveCadastro()">Salvar</button>
+            <button class="btn" onclick="clearCadastro()">Limpar</button>
+          </div>
+
+          <div style="margin-top:12px" id="cadPreview" class="preview">—</div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="btn" onclick="exportCadastros()">Exportar Cadastros XLSX</button>
+            <button class="btn warn" onclick="clearCadastros()">Limpar Cadastros</button>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="footer">
+        <div class="small">Versão local • Off-line</div>
+        <div class="small">Feito pra você — Victor</div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- toast -->
+<div id="toast"></div>
+
+<script>
+/* ============ Keys & data ============ */
+const KEY_CAD = 'pc_cad_v1';
+const KEY_FRONTS = 'pc_frentes_v1';
+const KEY_ACTIVE = 'pc_activeDate_v1';
+
+const USERS = [
+  {user:'VICTOR', pass:'CMPK123', role:'admin'},
+  {user:'VISITANTE', pass:'140205', role:'view'}
+];
+
+let SESSION = null;
+
+/* ============ Helpers ============ */
+function load(key){ try{ return JSON.parse(localStorage.getItem(key) || 'null'); }catch(e){ return null; } }
+function save(key,val){ localStorage.setItem(key, JSON.stringify(val)); }
+function nowISO(){ return new Date().toISOString().slice(0,10); }
+
+function showToast(msg, time=2000){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  t.style.opacity = '1';
+  clearTimeout(t._hide);
+  t._hide = setTimeout(()=>{ t.style.opacity = '0'; setTimeout(()=> t.style.display='none',320); }, time);
+}
+
+/* ============ UI navigation ============ */
+function hideAllSections(){ ['section_dashboard','section_frentes','section_portal','section_cadastros'].forEach(id=>document.getElementById(id).classList.add('hidden')); }
+function goToSection(sec){ hideAllSections(); document.getElementById('section_' + sec).classList.remove('hidden'); if(sec==='dashboard') refreshStats(); if(sec==='frentes') refreshFrentesPreview(); if(sec==='cadastros') renderCadastros(); }
+
+/* ============ Login ============ */
+function login(){
+  const u = (document.getElementById('loginUser').value||'').trim().toUpperCase();
+  const p = (document.getElementById('loginPass').value||'').trim();
+  const found = USERS.find(x=> x.user === u && x.pass === p);
+  if(!found){ alert('Usuário ou senha incorretos'); return; }
+  SESSION = found;
+  document.getElementById('loginPanel').classList.add('hidden');
+  document.getElementById('adminPanel').classList.toggle('hidden', SESSION.role !== 'admin');
+  document.getElementById('quickPanel').classList.remove('hidden');
+  document.getElementById('sessionPanel').classList.remove('hidden');
+  document.getElementById('whoami').textContent = SESSION.user + (SESSION.role === 'admin' ? ' • ADMIN' : ' • VISITANTE');
+  document.getElementById('topUser').textContent = SESSION.user;
+  const active = localStorage.getItem(KEY_ACTIVE) || nowISO();
+  document.getElementById('frontDate').value = active;
+  refreshDatesList(); goToSection('dashboard');
+  showToast('Bem-vindo, ' + SESSION.user, 1600);
+}
+function fillDemo(){ document.getElementById('loginUser').value='VICTOR'; document.getElementById('loginPass').value='CMPK123'; }
+function logout(){ SESSION=null; document.getElementById('loginPanel').classList.remove('hidden'); document.getElementById('adminPanel').classList.add('hidden'); document.getElementById('quickPanel').classList.add('hidden'); document.getElementById('sessionPanel').classList.add('hidden'); document.getElementById('loginUser').value=''; document.getElementById('loginPass').value=''; document.getElementById('whoami').textContent=''; document.getElementById('topUser').textContent='—'; goToSection('dashboard'); showToast('Desconectado'); }
+
+/* ============ Import frentes ============ */
+function importSheet(){
+  if(!SESSION || SESSION.role !== 'admin'){ alert('Apenas admin pode importar'); return; }
+  const file = document.getElementById('fileInput').files[0];
+  if(!file){ alert('Selecione o arquivo (.xlsx ou .csv)'); return; }
+  const date = document.getElementById('frontDate').value || nowISO();
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try{
+      const data = e.target.result;
+      const wb = XLSX.read(data, {type:'array'});
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet, { header:1, defval:'' });
+      if(!rows || rows.length < 2){ alert('Planilha sem dados.'); return; }
+      const header = rows[0].map(h => String(h||'').toLowerCase().trim());
+      const map={Motorista:-1,CPF:-1,Veiculo:-1,Placa1:-1,Placa2:-1,Eixos:-1,Capacidade:-1,Frente:-1,Localizacao:-1};
+      header.forEach((h,i)=>{
+        if(h.includes('motor')||h.includes('nome')) map.Motorista = map.Motorista===-1?i:map.Motorista;
+        if(h.includes('cpf')) map.CPF = map.CPF===-1?i:map.CPF;
+        if(h.includes('veic')||h.includes('veículo')) map.Veiculo = map.Veiculo===-1?i:map.Veiculo;
+        if(h.includes('plac') && h.includes('1')) map.Placa1 = map.Placa1===-1?i:map.Placa1;
+        if(h.includes('plac') && h.includes('2')) map.Placa2 = map.Placa2===-1?i:map.Placa2;
+        if(h.match(/eixo/)) map.Eixos = map.Eixos===-1?i:map.Eixos;
+        if(h.includes('capac')||h.includes('kg')) map.Capacidade = map.Capacidade===-1?i:map.Capacidade;
+        if(h.includes('frent')) map.Frente = map.Frente===-1?i:map.Frente;
+        if(h.includes('local')) map.Localizacao = map.Localizacao===-1?i:map.Localizacao;
+      });
+      Object.keys(map).forEach((k, idx) => { if(map[k] === -1) map[k] = Math.min(header.length-1, 2 + idx); });
+      const frList = [];
+      for(let r=1;r<rows.length;r++){
+        const row = rows[r];
+        if(!row) continue;
+        const m = String(row[map.Motorista]||'').trim();
+        const c = String(row[map.CPF]||'').replace(/\D/g,'').trim();
+        const ve = String(row[map.Veiculo]||'').trim();
+        const p1 = String(row[map.Placa1]||'').trim();
+        const p2 = String(row[map.Placa2]||'').trim();
+        const eix = String(row[map.Eixos]||'').trim();
+        const cap = String(row[map.Capacidade]||'').trim();
+        const fr = String(row[map.Frente]||'').trim();
+        const loc = String(row[map.Localizacao]||'').trim();
+        if(!m && !c) continue;
+        frList.push({Motorista:m||'-', CPF:c||'', Veiculo:ve||'', Placa1:p1||'', Placa2:p2||'', Eixos:eix||'', Capacidade:cap||'', Frente:fr||'', Localizacao:loc||''});
+      }
+      const all = load(KEY_FRONTS) || {};
+      all[date] = frList;
+      save(KEY_FRONTS, all);
+      save(KEY_ACTIVE, date);
+      document.getElementById('fileInput').value='';
+      showToast(`Importado ${frList.length} linhas — data ${date}`);
+      refreshDatesList(); refreshFrentesPreview(); refreshStats();
+    }catch(err){ console.error(err); alert('Erro ao processar o arquivo.'); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function refreshDatesList(){
+  const wrap = document.getElementById('datesList');
+  const all = load(KEY_FRONTS) || {};
+  const keys = Object.keys(all).sort().reverse();
+  if(keys.length===0){ wrap.innerHTML = '<div class="small">Nenhuma data registrada.</div>'; return; }
+  wrap.innerHTML = keys.map(k=>{
+    const cnt = (all[k]||[]).length;
+    const active = localStorage.getItem(KEY_ACTIVE) === k;
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 2px">
+      <div><strong>${k}</strong> <span class="small">(${cnt} registros)</span></div>
+      <div>
+        <button class="copy-btn" onclick="setActive('${k}')">${active? 'Ativa': 'Ativar'}</button>
+        <button class="copy-btn" onclick="previewDate('${k}')">Preview</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function setActive(d){
+  localStorage.setItem(KEY_ACTIVE, d);
+  document.getElementById('frontDate').value = d;
+  refreshDatesList(); refreshFrentesPreview(); refreshStats();
+  showToast('Data ativa definida: ' + d);
+}
+function previewDate(d){
+  const all = load(KEY_FRONTS) || {};
+  const list = all[d] || [];
+  const w = window.open('', '_blank', 'width=900,height=600');
+  const html = `<body style="background:#041612;color:#e8fff6;font-family:Poppins;padding:20px"><h3>Preview — ${d} (${list.length} registros)</h3>
+    <table style="width:100%;border-collapse:collapse">
+      <thead><tr style="text-align:left;color:${'#00c17a'}"><th>Motorista</th><th>CPF</th><th>Frente</th><th>Localização</th></tr></thead>
+      <tbody>${list.map(i=>`<tr><td>${i.Motorista}</td><td>${i.CPF}</td><td>${i.Frente}</td><td>${i.Localizacao}</td></tr>`).join('')}</tbody>
+    </table></body>`;
+  w.document.write(html); w.document.close();
+}
+function clearAllFrentes(){ if(!confirm('Remover todas as frentes armazenadas?')) return; localStorage.removeItem(KEY_FRONTS); localStorage.removeItem(KEY_ACTIVE); refreshDatesList(); refreshFrentesPreview(); refreshStats(); showToast('Frentes removidas'); }
+
+/* ============ Frentes view & portal ============ */
+function refreshFrentesPreview(){
+  const ad = localStorage.getItem(KEY_ACTIVE) || '—';
+  document.getElementById('activeDateShow').textContent = 'Data ativa: ' + ad;
+  const all = load(KEY_FRONTS) || {};
+  const list = all[ad] || [];
+  if(!list || list.length===0){ document.getElementById('frentesPreview').innerHTML = '<div class="small">Nenhuma frente ativa para a data.</div>'; document.getElementById('statFrentes').textContent='0'; return; }
+  document.getElementById('statFrentes').textContent = list.length;
+  const table = `<table class="table"><thead><tr><th>Motorista</th><th>CPF</th><th>Frente</th><th>Localização</th><th>Link</th></tr></thead><tbody>
+    ${list.map(i=>`<tr><td>${i.Motorista}</td><td>${i.CPF}</td><td>${i.Frente}</td><td>${i.Localizacao}</td><td><button class="copy-btn" onclick="copy(genPortalLink('${i.CPF}'))">Copiar</button></td></tr>`).join('')}
+  </tbody></table>`;
+  document.getElementById('frentesPreview').innerHTML = table;
+}
+
+function openPortalPublic(){ const url = location.href.split('?')[0].split('#')[0] + '?consulta'; window.open(url,'_blank'); }
+function genPortalLink(cpf){ const base = location.href.split('?')[0].split('#')[0]; return base + '?consulta&cpf=' + encodeURIComponent(cpf || ''); }
+
+/* ============ Generate & copy one global link ============ */
+function genAndCopyPortalLink(){
+  const link = location.href.split('?')[0].split('#')[0] + '?consulta';
+  navigator.clipboard?.writeText(link).then(()=> {
+    showToast('Link de consulta copiado! Envie para os motoristas.');
+    const pub = document.getElementById('publicLink');
+    if(pub) pub.textContent = link;
+  }).catch(()=> { prompt('Copie o link:', link); });
+}
+
+/* ============ per-CPF link generator ============ */
+function genLink(){
+  const cpf = (document.getElementById('cpfForLink').value||'').replace(/\D/g,'').trim();
+  if(!cpf){ alert('Informe o CPF'); return; }
+  const link = genPortalLink(cpf);
+  document.getElementById('linkOut').innerHTML = `<span class="small">${link}</span> <button class="copy-btn" onclick="copy('${link}')">Copiar</button>`;
+}
+
+/* ============ Portal lookup ============ */
+function portalLookup(){
+  const cpf = (document.getElementById('portalCPF').value||'').replace(/\D/g,'').trim();
+  showPortalResult(cpf);
+}
+function showPortalResult(cpf){
+  const out = document.getElementById('portalResult'); out.innerHTML = '';
+  if(!cpf){ out.innerHTML = '<div class="notice">Informe o CPF correto.</div>'; return; }
+  const ad = localStorage.getItem(KEY_ACTIVE) || '';
+  const all = load(KEY_FRONTS) || {}; const list = all[ad] || [];
+  const found = list.find(i => i.CPF === cpf);
+  if(!found){ out.innerHTML = `<div class="notice">Nenhuma frente atribuída para o CPF <strong>${cpf}</strong> na data ${ad}.</div>`; return; }
+  out.innerHTML = `<div style="padding:12px;border-left:4px solid var(--accent);background:rgba(0,255,162,0.04);border-radius:8px">
+    <div style="font-weight:800">${found.Motorista}</div>
+    <div class="small">CPF: ${found.CPF}</div>
+    <div style="margin-top:8px"><strong>Veículo:</strong> ${found.Veiculo || '-'}</div>
+    <div style="margin-top:6px"><strong>Placas:</strong> ${[found.Placa1,found.Placa2].filter(Boolean).join(' • ') || '-'}</div>
+    <div style="margin-top:6px"><strong>Frente:</strong> ${found.Frente || '-'}</div>
+    <div style="margin-top:6px"><strong>Localização:</strong> ${found.Localizacao || '-'}</div>
+    <div style="margin-top:8px" class="small">Data ativa: ${ad}</div>
+  </div>`;
+}
+
+/* ============ Standalone portal when opened with ?consulta ============ */
+function parseQueryOnLoad(){
+  const params = new URLSearchParams(location.search);
+  if(params.has('consulta')){
+    const cpfParam = params.get('cpf') || '';
+    showPortalStandalone(cpfParam);
+  }
+}
+function showPortalStandalone(prefillCPF=''){
+  const ad = localStorage.getItem(KEY_ACTIVE) || nowISO();
+  const html = `
+    <body style="margin:0;background:#041612;color:#e8fff6;font-family:Poppins;padding:24px">
+      <div style="max-width:720px;margin:0 auto">
+        <h2>Portal de Consulta — PROJETO CARRETAS</h2>
+        <div class="small" style="margin-bottom:8px">Data ativa: ${ad}</div>
+        <div style="display:flex;gap:8px">
+          <input id="pf" style="flex:1;padding:10px;border-radius:8px;border:none;background:#083226;color:#e8fff6" placeholder="Digite o CPF"/>
+          <button id="btnq" style="padding:10px;border-radius:8px;border:none;background:${document.documentElement ? getComputedStyle(document.documentElement).getPropertyValue('--accent') : '#00c17a'};color:#001;font-weight:800">Consultar</button>
+        </div>
+        <div id="res" style="margin-top:12px"></div>
+        <div style="margin-top:20px" class="small">Feche a aba para retornar ao painel administrativo.</div>
+      </div>
+      <script>
+        const pf = document.getElementById('pf');
+        const btn = document.getElementById('btnq');
+        const res = document.getElementById('res');
+        function lookup(cpf){
+          try{
+            const all = JSON.parse(localStorage.getItem('${KEY_FRONTS}')||'null')||{};
+            const list = all['${ad}']||[];
+            const found = list.find(i => i.CPF === cpf);
+            if(!found){ res.innerHTML = '<div style="color:#ffd6a8">Nenhuma frente para ' + cpf + '</div>'; return; }
+            res.innerHTML = '<div style="padding:12px;border-left:4px solid ${document.documentElement ? getComputedStyle(document.documentElement).getPropertyValue('--accent') : '#00c17a'};background:rgba(0,255,162,0.04)"><div style="font-weight:800">'+found.Motorista+'</div><div class="small">Frente: '+found.Frente+'</div><div class="small">Local: '+found.Localizacao+'</div></div>';
+          }catch(e){ res.innerHTML = '<div style="color:#ff8b8b">Erro ao buscar</div>'; }
+        }
+        btn.addEventListener('click', ()=>{ const cpf=(pf.value||'').replace(/\\D/g,''); if(!cpf){ res.innerHTML='<div style="color:#ffdca8">Informe CPF</div>'; return; } lookup(cpf); });
+        if('${prefillCPF}') { pf.value='${prefillCPF}'; lookup('${prefillCPF}'); }
+      <\/script>
+    </body>`;
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+}
+
+/* ============ Cadastros ============ */
+function saveCadastro(){
+  if(!SESSION || SESSION.role !== 'admin'){ alert('Somente admin'); return; }
+  const nome = (document.getElementById('cMotorista').value||'').trim();
+  if(!nome){ alert('Informe o motorista'); return; }
+  const obj = {
+    nome,
+    cpf: (document.getElementById('cCPF').value||'').replace(/\D/g,''),
+    Veiculo: document.getElementById('cVeiculo').value||'',
+    Placa1: document.getElementById('cPlaca1').value||'',
+    Placa2: document.getElementById('cPlaca2').value||'',
+    Eixos: document.getElementById('cEixos').value||'',
+    Capacidade: document.getElementById('cCap').value||''
+  };
+  const db = load(KEY_CAD) || [];
+  db.push(obj); save(KEY_CAD, db); clearCadastro(); renderCadastros(); refreshStats(); showToast('Cadastro salvo');
+}
+function renderCadastros(){
+  const wrap = document.getElementById('cadPreview');
+  const db = load(KEY_CAD) || [];
+  if(!db.length){ wrap.innerHTML = '<div class="small">Nenhum cadastro.</div>'; return; }
+  const html = `<table class="table"><thead><tr><th>Motorista</th><th>CPF</th><th>Veículo</th><th>Placas</th><th>Eixos</th><th>Capacidade</th></tr></thead><tbody>
+    ${db.map(d=>`<tr><td>${d.nome}</td><td>${d.cpf}</td><td>${d.Veiculo||''}</td><td>${[d.Placa1,d.Placa2].filter(Boolean).join(' • ')}</td><td>${d.Eixos||''}</td><td>${d.Capacidade||''}</td></tr>`).join('')}
+  </tbody></table>`;
+  wrap.innerHTML = html;
+}
+function clearCadastro(){ ['cMotorista','cCPF','cVeiculo','cPlaca1','cPlaca2','cEixos','cCap'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; }); }
+function clearCadastros(){ if(!confirm('Limpar todos os cadastros locais?')) return; localStorage.removeItem(KEY_CAD); renderCadastros(); refreshStats(); showToast('Cadastros removidos'); }
+
+/* ============ Intelligent paste for cMotorista ============ */
+document.addEventListener('DOMContentLoaded', ()=>{
+  const el = document.getElementById('cMotorista');
+  if(el){
+    el.addEventListener('paste', (e)=>{
+      setTimeout(()=>{
+        const v = (el.value||'').trim(); if(!v) return;
+        let parts = v.split(/\t|,/).map(s=>s.trim()).filter(Boolean);
+        if(parts.length >= 7){
+          document.getElementById('cMotorista').value = parts[0];
+          document.getElementById('cCPF').value = parts[1].replace(/\D/g,'');
+          document.getElementById('cVeiculo').value = parts[2] || '';
+          document.getElementById('cPlaca1').value = parts[3] || '';
+          document.getElementById('cPlaca2').value = parts[4] || '';
+          document.getElementById('cEixos').value = parts[5] || '';
+          document.getElementById('cCap').value = parts[6] || '';
+        } else {
+          const tokens = v.split(/\s+/).filter(Boolean);
+          const cpfTok = tokens.find(t => /\d{8,11}/.test(t));
+          if(cpfTok){
+            const idx = tokens.indexOf(cpfTok);
+            const name = tokens.slice(0, idx).join(' ');
+            document.getElementById('cMotorista').value = name;
+            document.getElementById('cCPF').value = cpfTok.replace(/\D/g,'');
+            document.getElementById('cVeiculo').value = tokens[idx+1] || '';
+            document.getElementById('cPlaca1').value = tokens[idx+2] || '';
+            document.getElementById('cPlaca2').value = tokens[idx+3] || '';
+            document.getElementById('cEixos').value = tokens[idx+4] || '';
+            document.getElementById('cCap').value = tokens[idx+5] || '';
+          }
+        }
+      },60);
+    });
+  }
+});
+
+/* ============ Export XLSX ============ */
+function exportCadastros(){
+  const db = load(KEY_CAD) || [];
+  if(!db.length){ alert('Sem cadastros'); return; }
+  const rows = db.map(r=>({Motorista:r.nome,CPF:r.cpf,Veiculo:r.Veiculo,Placa1:r.Placa1,Placa2:r.Placa2,Eixos:r.Eixos,Capacidade:r.Capacidade}));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Cadastros');
+  XLSX.writeFile(wb, 'cadastros_carretas_' + new Date().toISOString().slice(0,19).replace(/[:T]/g,'-') + '.xlsx');
+}
+function exportActiveFrentes(){
+  const ad = localStorage.getItem(KEY_ACTIVE) || nowISO();
+  const all = load(KEY_FRONTS) || {};
+  const rows = (all[ad] || []).map(i=>({Motorista:i.Motorista,CPF:i.CPF,Frente:i.Frente,Localizacao:i.Localizacao,Veiculo:i.Veiculo,Placa1:i.Placa1,Placa2:i.Placa2,Eixos:i.Eixos,Capacidade:i.Capacidade}));
+  if(!rows.length){ alert('Sem frentes na data ativa'); return; }
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Frentes_' + ad);
+  XLSX.writeFile(wb, 'frentes_' + ad + '.xlsx');
+}
+
+/* ============ Stats ============ */
+function refreshStats(){
+  const cad = load(KEY_CAD) || [];
+  document.getElementById('statMotoristas').textContent = (cad.length || 0);
+  refreshFrentesPreview();
+}
+
+/* ============ Utilities ============ */
+function copy(text){ navigator.clipboard?.writeText(text).then(()=> showToast('Copiado!')).catch(()=> prompt('Copie manualmente', text)); }
+
+/* ============ Init ============ */
+window.addEventListener('load', ()=>{
+  refreshDatesList();
+  refreshFrentesPreview();
+  renderCadastros();
+  parseQueryOnLoad();
+  goToSection('dashboard');
+});
+</script>
+</body>
+</html>
